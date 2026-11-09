@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daily Inventory – Infinite Lighting</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f5f6f8;--card:#fff;--fg:#14161a;--mut:#6b7280;--line:#e3e6ea;--line2:#eef0f3;--accent:#2f5bea;
+--out:#d92d20;--outbg:#fdecea;--in:#067647;--inbg:#e5f6ec;--beg:#f0f1f4;--wk:#fafafb;--hov:#eef3ff;--warn:#b54708;--warnbg:#fff2e0;--zero:#fde4e1;--shadow:0 1px 2px rgba(16,24,40,.06),0 8px 24px rgba(16,24,40,.06)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1114;--card:#171a1f;--fg:#ececee;--mut:#98a0ab;--line:#2a2e35;--line2:#22262c;--accent:#6e8cff;--out:#ff7b72;--outbg:#3a1d1d;--in:#4ade80;--inbg:#143222;--beg:#1f2329;--wk:#1a1d22;--hov:#1d2740;--warn:#fbbf24;--warnbg:#382a10;--zero:#3a1d1d;--shadow:0 8px 24px rgba(0,0,0,.4)}}
+:root[data-theme="dark"]{--bg:#0f1114;--card:#171a1f;--fg:#ececee;--mut:#98a0ab;--line:#2a2e35;--line2:#22262c;--accent:#6e8cff;--out:#ff7b72;--outbg:#3a1d1d;--in:#4ade80;--inbg:#143222;--beg:#1f2329;--wk:#1a1d22;--hov:#1d2740;--warn:#fbbf24;--warnbg:#382a10;--zero:#3a1d1d;--shadow:0 8px 24px rgba(0,0,0,.4)}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*{box-sizing:border-box}
+body{margin:0;height:100%;display:flex;flex-direction:column;background:var(--bg);color:var(--fg);font:13px/1.35 Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;font-feature-settings:"tnum","cv11";-webkit-font-smoothing:antialiased}
+button,select,input{font:inherit;color:inherit}
+header{display:flex;align-items:center;gap:20px;padding:14px 20px;background:var(--card);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.brand b{display:block;font-size:14px;font-weight:600;letter-spacing:.2em}
+.brand span{display:block;color:var(--mut);font-size:12px;margin-top:1px}
+.ctl{display:flex;flex-direction:column;gap:4px}
+.ctl>label{font-size:11px;font-weight:500;color:var(--mut)}
+.field{display:flex;align-items:center;border:1px solid var(--line);border-radius:8px;background:var(--card);height:36px;overflow:hidden}
+.field:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
+.field select,.field input{border:0;background:transparent;height:100%;padding:0 10px;outline:0;cursor:pointer}
+.field input{cursor:text;width:170px}
+.field .sep{width:1px;height:18px;background:var(--line)}
+.nav{border:0;background:transparent;width:32px;height:100%;cursor:pointer;color:var(--mut);font-size:16px}
+.nav:hover{background:var(--beg);color:var(--fg)}
+.st{display:flex;align-items:center;gap:8px;padding:0 12px;white-space:nowrap;font-size:12px}.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.tabs{display:flex;gap:4px;background:var(--beg);padding:3px;border-radius:10px;margin-left:12px;margin-right:auto}
+.tabs button{border:0;background:transparent;padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:500;color:var(--mut)}
+.tabs button.on{background:var(--card);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.view{display:flex;flex-direction:column;flex:1;min-height:0}.view[hidden]{display:none}
+.bar{display:flex;gap:14px;padding:12px 20px 0;align-items:flex-end;flex-wrap:wrap}
+#s th.bh,#s th.th{width:110px;min-width:110px;cursor:pointer;user-select:none}
+#s th.item{cursor:pointer}
+#t thead th[data-k]{cursor:pointer;user-select:none}
+#t thead th[data-k]:hover{background:var(--hov)}
+td.sv{font-size:14px;font-weight:600;width:110px;min-width:110px}
+td.sv.pos{background:var(--inbg);color:var(--in)}
+td.sv.neg{background:var(--outbg);color:var(--out)}
+td.sv.z{color:var(--mut);font-weight:400}
+td.tt{font-weight:700;background:var(--beg)}
+tfoot td.sv{background:var(--card);color:var(--fg);font-size:13px}
+.alert{display:flex;gap:10px;align-items:center;margin:10px 20px 0;padding:10px 14px;border-radius:10px;background:var(--warnbg);color:var(--warn);border:1px solid var(--warn);flex-wrap:wrap}.alert[hidden]{display:none}.alert button{margin-left:auto;border:1px solid currentColor;background:transparent;color:inherit;border-radius:6px;padding:4px 10px;cursor:pointer}
+.loader{position:fixed;left:0;right:0;bottom:0;top:64px;z-index:15;background:color-mix(in srgb,var(--bg) 90%,transparent);backdrop-filter:blur(2px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:var(--fg)}
+.loader[hidden]{display:none}
+.loader svg{width:104px;height:104px;overflow:visible}
+.loader p{margin:0;color:var(--mut);font-size:13px}
+.loader .trk{stroke:var(--line)}
+.loader .run,.loader .ring{stroke:var(--accent)}
+.loader .run{stroke-dasharray:28 72;animation:lrun 1.6s linear infinite}
+.loader .ring{stroke-dasharray:22 78;transform-box:fill-box;transform-origin:center;animation:lspin 1.3s linear infinite}
+@keyframes lrun{to{stroke-dashoffset:-100}}
+@keyframes lspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.loader .run,.loader .ring{animation:none}}
+.toggle{display:flex;align-items:center;gap:8px;height:36px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);cursor:pointer;user-select:none}
+.toggle input{accent-color:var(--accent)}
+.stats{display:flex;gap:12px;padding:14px 20px 4px;flex-wrap:wrap}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 14px;min-width:120px}
+.stat small{display:block;color:var(--mut);font-size:11px;font-weight:500}
+.stat strong{font-size:18px;font-weight:600}
+.stat.o strong{color:var(--out)}.stat.i strong{color:var(--in)}
+.hint{margin-left:auto;align-self:center;color:var(--mut);font-size:12px}
+.wrap{flex:1;min-height:0;overflow:auto;margin:10px 20px 8px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
+table{border-collapse:separate;border-spacing:0;table-layout:fixed;width:max-content;min-width:100%}
+th,td{border-right:1px solid var(--line2);border-bottom:1px solid var(--line2);text-align:center;padding:0;height:32px}
+thead th{position:sticky;top:0;z-index:3;background:var(--card);height:52px;font-weight:600;border-bottom:1px solid var(--line)}
+thead th small{display:block;font-weight:400;color:var(--mut);font-size:10px;margin-top:2px}
+.d{width:38px;min-width:38px}
+.item{position:sticky;left:0;z-index:2;width:190px;min-width:190px;text-align:left!important;background:var(--card);padding-left:14px!important;border-right:1px solid var(--line)!important}
+thead .item{z-index:4;color:var(--mut);font-weight:500;font-size:12px}
+td.item{font-weight:500;font-size:13px}
+.pname{position:sticky;left:190px;z-index:2;width:240px;min-width:240px;max-width:240px;text-align:left!important;background:var(--card);padding:0 10px!important;border-right:1px solid var(--line)!important;font-size:12px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+thead .pname{z-index:4;font-weight:500}
+tfoot td.pname{z-index:4}
+td.beg,td.end{font-weight:600;background:var(--beg);width:48px;min-width:48px}
+td.end{border-left:1px solid var(--line)}
+td.end.z{background:var(--zero);color:var(--out)}
+td.end.low{background:var(--warnbg);color:var(--warn)}
+thead th.beg,thead th.end{background:var(--beg);color:var(--mut);font-weight:500;font-size:12px}
+.we{background:var(--wk)}
+thead th.we{background:var(--wk)}
+td.c{cursor:default;font-size:11px;font-weight:600}
+td.c b{display:block;margin:1px 3px;border-radius:5px;padding:2px 0;line-height:1.2}
+td.c b.o{color:var(--out);background:var(--outbg)}
+td.c b.i{color:var(--in);background:var(--inbg)}
+td.has{cursor:pointer}
+td.has:hover b{filter:brightness(.95);box-shadow:0 0 0 1.5px currentColor}
+td.has:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+tbody tr:hover td:not(.beg):not(.end){background:var(--hov)}
+tbody tr:hover td.we{background:var(--hov)}
+th.col,td.col:not(.beg):not(.end){background:var(--hov)}
+tfoot td{position:sticky;bottom:0;z-index:3;background:var(--card);border-top:1px solid var(--line);font-size:10px;font-weight:600;height:40px;line-height:1.3}
+tfoot td.item{z-index:4;font-size:12px;color:var(--mut)}
+.empty{padding:60px;text-align:center;color:var(--mut)}
+.ov{position:fixed;inset:0;background:rgba(10,12,16,.5);backdrop-filter:blur(2px);display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
+.ov.on{display:flex}
+.md{background:var(--card);width:min(660px,100%);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.35);max-height:90vh;overflow:auto;animation:pop .16s ease-out}
+@keyframes pop{from{transform:translateY(8px) scale(.98);opacity:0}}
+@media (prefers-reduced-motion:reduce){.md{animation:none}}
+.mh{display:flex;justify-content:space-between;align-items:flex-start;padding:18px 20px 14px}
+.mh h2{margin:0 0 3px;font-size:17px;font-weight:600}.mh p{margin:0;color:var(--mut)}
+.mh button{border:0;background:var(--beg);width:30px;height:30px;border-radius:8px;cursor:pointer;font-size:18px;line-height:1}
+.md table{width:100%;table-layout:auto}
+.md th{padding:8px 20px;background:var(--beg);text-align:left;font-size:11px;font-weight:500;color:var(--mut);border:0;height:auto}
+.md td{height:auto;padding:12px 20px;text-align:left;border:0;border-bottom:1px solid var(--line2)}
+.md .n{text-align:right!important;font-weight:600;font-size:14px}
+.md small{color:var(--mut)}
+.tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;margin-right:6px}
+.tag.o{background:var(--outbg);color:var(--out)}.tag.i{background:var(--inbg);color:var(--in)}
+.mf{padding:14px 20px;display:flex;gap:10px;justify-content:flex-end}
+.mf span{border-radius:8px;padding:6px 12px;font-weight:600;background:var(--beg)}
+.mf .o{background:var(--outbg);color:var(--out)}.mf .i{background:var(--inbg);color:var(--in)}
+.note{padding:0 20px 14px;color:var(--mut);font-size:12px}
+@media (max-width:700px){.hint{display:none}header{gap:12px}.field input{width:130px}}
+
+.login{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg)}
+.login[hidden]{display:none}
+.login form{width:100%;max-width:360px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:28px;display:flex;flex-direction:column;gap:14px}
+.login h1{margin:0;font-size:16px;font-weight:600;letter-spacing:.12em}
+.login p{margin:0;color:var(--mut);font-size:12px}
+.login .field{height:40px}.login .field input{width:100%;cursor:text}
+.login .go{height:40px;border:0;border-radius:8px;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+.login .go:disabled{opacity:.6;cursor:wait}
+.login .err{color:var(--out);font-size:12px;min-height:16px}
+.btn{height:36px;padding:0 14px;border:1px solid var(--line);border-radius:8px;background:var(--card);cursor:pointer}
+.btn:hover{background:var(--beg)}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">
+    <svg width="40" height="40" viewBox="0 0 54 54" fill="none" stroke="currentColor"><circle cx="27" cy="27" r="25" stroke-width="2"/><path d="M27 27c-3-6-6.500-8-10-8a8 8 0 000 16c3.500 0 7-2 10-8s6.500-8 10-8a8 8 0 010 16c-3.500 0-7-2-10-8z" stroke-width="2.600"/></svg>
+    <div><b>INFINITE LIGHTING</b><span>Daily inventory</span></div>
+  </div>
+  <div class="tabs"><button id="tabD" class="on">Daily</button><button id="tabS">Stock by branch</button></div>
+  <div class="ctl dv"><label for="mo">Period</label>
+    <div class="field"><button class="nav" id="pv" aria-label="Previous month">‹</button><select id="mo"></select><i class="sep"></i><select id="yr"></select><button class="nav" id="nx" aria-label="Next month">›</button></div></div>
+  <div class="ctl dv"><label for="br">Branch</label><div class="field"><select id="br"></select></div></div>
+  <div class="ctl dv"><label for="q">Search item</label><div class="field"><input id="q" type="search" placeholder="e.g. MFLN or 25W"></div></div>
+  <div class="ctl"><label>Data source</label><div class="field"><span id="st" class="st"></span><i class="sep"></i><button class="nav" id="rf" title="Refresh from API" aria-label="Refresh">↻</button></div></div>
+  <div class="ctl dv"><label>&nbsp;</label><label class="toggle"><input type="checkbox" id="mv"> With movement only</label></div>
+  <div class="ctl" style="margin-left:auto"><label id="who">Admin</label><button class="btn" id="lo" type="button">Sign out</button></div>
+</header>
+<div class="login" id="login" hidden>
+  <form id="lf" autocomplete="on">
+    <div><h1>INFINITE LIGHTING</h1><p>Admin sign in</p></div>
+    <div class="ctl"><label for="le">Email</label><div class="field"><input id="le" type="email" autocomplete="username" required></div></div>
+    <div class="ctl"><label for="lp">Password</label><div class="field"><input id="lp" type="password" autocomplete="current-password" required></div></div>
+    <div class="err" id="lerr" role="alert"></div>
+    <button class="go" id="lgo" type="submit">Sign in</button>
+  </form>
+</div>
+<div id="loader" class="loader" role="status" aria-live="polite"><svg viewBox="0 0 54 54" fill="none" stroke-width="2" stroke-linecap="round"><circle class="trk" cx="27" cy="27" r="25" pathLength="100"/><circle class="ring" cx="27" cy="27" r="25" pathLength="100"/><path class="trk" pathLength="100" stroke-width="2.6" d="M27 27c-3-6-6.5-8-10-8a8 8 0 000 16c3.5 0 7-2 10-8s6.5-8 10-8a8 8 0 010 16c-3.5 0-7-2-10-8z"/><path class="run" pathLength="100" stroke-width="2.6" d="M27 27c-3-6-6.5-8-10-8a8 8 0 000 16c3.5 0 7-2 10-8s6.5-8 10-8a8 8 0 010 16c-3.5 0-7-2-10-8z"/></svg><p>Loading data…</p></div>
+<div id="alert" class="alert" role="alert" hidden><b>Not connected to the database.</b> <span id="almsg"></span><button id="alretry">Try again</button></div>
+<main id="vDaily" class="view">
+<div class="stats" id="stats"></div>
+<div class="wrap" id="wrap"><table id="t"></table></div>
+<div class="note">Reads live from the wix_product_transaction table (columns: date, product code, branch, transaction type, qty, transfer to, inv./DR. no., remarks). TRANSFER = out at Branch, in at Transfer To. Use ↻ after you add rows. Click a highlighted number for its transactions.</div>
+</main>
+<main id="vStock" class="view" hidden>
+  <div class="bar">
+    <div class="ctl"><label for="asof">As of</label><div class="field"><input id="asof" type="date" style="width:150px"></div></div>
+    <div class="ctl"><label for="sq">Search item</label><div class="field"><input id="sq" type="search" placeholder="e.g. MFLN or 25W"></div></div>
+    <div class="ctl"><label>&nbsp;</label><label class="toggle"><input type="checkbox" id="hz" checked> Hide items with zero stock everywhere</label></div>
+  </div>
+  <div class="stats" id="sstats"></div>
+  <div class="wrap"><table id="s"></table></div>
+  <div class="note">Quantity on hand per branch up to the "As of" date: IN adds, OUT subtracts, TRANSFER subtracts at the Branch and adds at Transfer To. <span style="color:var(--out)">Red</span> means the item was logged out before it was logged in.</div>
+</main>
+
+
+<div class="ov" id="ov"><div class="md" role="dialog" aria-modal="true" aria-labelledby="mt">
+  <div class="mh"><div><h2 id="mt"></h2><p id="ms"></p></div><button id="mx" aria-label="Close">&times;</button></div>
+  <div id="mb"></div>
+</div></div>
+
+<script>
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DOW=["S","M","T","W","T","F","S"];
+let BRANCHES=[];
+
+const $=id=>document.getElementById(id);
+function rng(s){let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19}
+ return()=>{h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return((h^=h>>>16)>>>0)/4294967296}}
+const pad=(n,l=2)=>String(n).padStart(l,"0");
+/* Date "11/03/25" (MM/DD/YY) or ISO "2025-11-03" -> "2025-11-03" */
+const normDate=v=>{const [m,d,y]=v.split("/");return `20${y}-${m}-${d}`};
+
+const esc=v=>String(v).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let TX=[],SRC="none";
+function parseCSV(t){const rows=[];let r=[],c="",q=false;
+  for(let i=0;i<t.length;i++){const ch=t[i];
+    if(q){if(ch==='"'){if(t[i+1]==='"'){c+='"';i++}else q=false}else c+=ch}
+    else if(ch==='"')q=true;
+    else if(ch===","){r.push(c);c=""}
+    else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&t[i+1]==="\n")i++;r.push(c);rows.push(r);r=[];c=""}
+    else c+=ch}
+  if(c||r.length){r.push(c);rows.push(r)}return rows}
+function toISO(v){v=String(v||"").trim();let m=v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if(m){const y=m[3].length===2?"20"+m[3]:m[3];return `${y}-${pad(+m[1])}-${pad(+m[2])}`}
+  m=v.match(/^(\d{4})-(\d{2})-(\d{2})/);return m?m[0]:null}
+function rowsToTx(rows){
+  const H=(rows[0]||[]).map(x=>x.trim().toUpperCase()),ix=n=>H.indexOf(n);
+  const iD=ix("DATE"),iC=ix("PRODUCT CODE"),iB=ix("BRANCH"),iT=ix("TRANSACTION TYPE"),iQ=ix("QTY"),iTo=ix("TRANSFER TO"),iDoc=ix("INV./DR. NO."),iR=ix("REMARKS");
+  if([iD,iC,iB,iT,iQ].some(i=>i<0))throw {code:"columns"};
+  const tx=[],bad=[];
+  rows.slice(1).forEach((r,n)=>{
+    if(!r.some(x=>x.trim()))return;
+    const g=i=>i<0?"":(r[i]||"").trim();
+    let type=g(iT).toUpperCase();if(type.startsWith("TRANSF"))type="TRANSFER";
+    const date=toISO(g(iD)),qty=parseFloat(g(iQ).replace(/,/g,""));
+    if(!date||!(qty>0)||!["IN","OUT","TRANSFER"].includes(type)||!g(iC)||!g(iB)){bad.push(n+2);return}
+    tx.push({date,code:g(iC),branch:g(iB).toUpperCase(),type,qty,to:g(iTo).toUpperCase(),doc:g(iDoc),remarks:g(iR)});
+  });
+  return{tx,bad}}
+let view="daily",sSort={k:"code",d:1};
+function stockData(asOf){
+  const m=new Map(),add=(c,b,q)=>{let r=m.get(c);if(!r){r={};m.set(c,r)}r[b]=(r[b]||0)+q};
+  TX.forEach(t=>{
+    if(t.date>asOf)return;
+    if(t.type==="TRANSFER"&&t.to===t.branch)return;
+    if(t.type==="IN")add(t.code,t.branch,t.qty);
+    else if(t.type==="OUT")add(t.code,t.branch,-t.qty);
+    else if(t.type==="TRANSFER"){add(t.code,t.branch,-t.qty);if(BRANCHES.includes(t.to))add(t.code,t.to,t.qty)}
+  });
+  return m}
+function renderStock(){
+  const asOf=$("asof").value||"9999-12-31",q=$("sq").value.trim().toLowerCase(),hz=$("hz").checked,m=stockData(asOf);
+  let rows=[...new Set(TX.map(t=>t.code))].map(c=>{const r=m.get(c)||{},by=BRANCHES.map(b=>r[b]||0);return{code:c,by,total:by.reduce((a,x)=>a+x,0)}});
+  const inStock=rows.filter(r=>r.by.some(x=>x>0)).length,short=rows.filter(r=>r.by.some(x=>x<0)).length;
+  const units=rows.reduce((a,r)=>a+r.by.reduce((s,x)=>s+(x>0?x:0),0),0);
+  rows=rows.filter(r=>(!q||r.code.toLowerCase().includes(q)||(NAMES.get(r.code)||"").toLowerCase().includes(q))&&(!hz||r.by.some(x=>x!==0)));
+  rows.sort((a,b)=>{const x=sSort.k==="code"?a.code.localeCompare(b.code):sSort.k==="total"?a.total-b.total:a.by[+sSort.k]-b.by[+sSort.k];return x?x*sSort.d:a.code.localeCompare(b.code)});
+  $("sstats").innerHTML=`<div class="stat"><small>Items</small><strong>${rows.length}</strong></div><div class="stat i"><small>Items with stock</small><strong>${inStock}</strong></div><div class="stat"><small>Units on hand</small><strong>${units}</strong></div><div class="stat o"><small>Items with negative qty</small><strong>${short}</strong></div><span class="hint">Click a column heading to sort</span>`;
+  const ar=k=>sSort.k===String(k)?(sSort.d>0?" ▲":" ▼"):"";
+  let h=`<thead><tr><th class="item" data-k="code">Item${ar("code")}</th><th class="pname">Product name</th>`+BRANCHES.map((b,i)=>`<th class="bh" data-k="${i}">${b}${ar(i)}</th>`).join("")+`<th class="th" data-k="total" style="background:var(--beg)">Total${ar("total")}</th></tr></thead><tbody>`;
+  rows.forEach(r=>{
+    h+=`<tr><td class="item">${r.code}</td><td class="pname" title="${esc(NAMES.get(r.code)||"")}">${esc(NAMES.get(r.code)||"")}</td>`+r.by.map(v=>v>0?`<td class="sv pos">${v}</td>`:v<0?`<td class="sv neg" title="Logged out before the stock was received">${v}</td>`:`<td class="sv z">–</td>`).join("")+`<td class="sv tt">${r.total}</td></tr>`});
+  if(!rows.length)h+=`<tr><td colspan="${BRANCHES.length+3}" class="empty">${SRC==="live"?"No items match your filters.":"No data. Not connected to the database."}</td></tr>`;
+  const bt=BRANCHES.map((b,i)=>rows.reduce((a,r)=>a+r.by[i],0));
+  h+=`</tbody><tfoot><tr><td class="item">Total units</td><td class="pname"></td>`+bt.map(v=>`<td class="sv">${v}</td>`).join("")+`<td class="sv tt">${bt.reduce((a,x)=>a+x,0)}</td></tr></tfoot>`;
+  $("s").innerHTML=h}
+function showView(v){
+  view=v;$("vDaily").hidden=v!=="daily";$("vStock").hidden=v!=="stock";
+  document.querySelectorAll(".dv").forEach(e=>e.style.display=v==="daily"?"":"none");
+  $("tabD").classList.toggle("on",v==="daily");$("tabS").classList.toggle("on",v==="stock");
+  v==="stock"?renderStock():render()}
+let NAMES=new Map();
+function applyData(){
+  NAMES=new Map();TX.forEach(t=>{if(t.name&&!NAMES.has(t.code))NAMES.set(t.code,t.name)});
+  const bs=[...new Set(TX.map(t=>t.branch))].sort((a,b)=>a==="WHSE"?-1:b==="WHSE"?1:a.localeCompare(b));
+  if(bs.length)BRANCHES=bs;
+  const cur=$("br").value;
+  $("br").innerHTML=BRANCHES.map(b=>`<option>${b}</option>`).join("");
+  if(BRANCHES.includes(cur))$("br").value=cur;
+  const ys=TX.map(t=>+t.date.slice(0,4)),y0=Math.min(2024,...ys),y1=Math.max(2027,...ys);
+  $("yr").innerHTML=Array.from({length:y1-y0+1},(_,i)=>`<option>${y0+i}</option>`).join("");
+  const last=TX.reduce((a,t)=>t.date>a?t.date:a,"");
+  if(last){$("yr").value=last.slice(0,4);$("mo").value=+last.slice(5,7)-1}
+  const td=new Date().toISOString().slice(0,10);$("asof").value=last>td?last:td;
+  render();if(view==="stock")renderStock()}
+function setStatus(k,x){
+  const el=$("st"),dot=k==="live"?"var(--in)":k==="loading"?"var(--accent)":k==="error"?"var(--out)":"var(--warn)";
+  let t="";
+  if(k==="loading")t="Loading data…";
+  else if(k==="live"){t=`Live from database · ${x.n} rows`;if(x.bad.length)t+=` · ${x.bad.length} skipped`;el.title=x.bad.length?"Skipped rows: "+x.bad.slice(0,15).join(", "):"Last refreshed "+new Date().toLocaleTimeString()}
+  else if(k==="demo")t="Not connected";
+  else{const c=x&&x.code,m={api:"API error: "+((x&&x.message)||""),network:"Can't reach the database. Check your internet connection"};
+    t=(m[c]||"Couldn't load data"+(c?" ("+c+")":""))+""}
+  el.innerHTML=`<i class="dot" style="background:${dot}"></i><span></span>`;el.lastChild.textContent=t;
+  const al=$("alert");if(k==="error"||k==="demo"){al.hidden=false;$("almsg").textContent=t}else al.hidden=true;
+  const lo=$("loader");lo.hidden=k!=="loading";lo.style.top=document.querySelector("header").offsetHeight+"px"}
+const SUPABASE_URL="https://mgujhiyftbhbgclsactz.supabase.co";
+const SUPABASE_KEY="sb_publishable_EQp2w6eT_doUAq5xxa9MwQ_kFPtEutC";
+const TABLE="wix_product_transaction";
+/* Column names are matched ignoring case, spaces, underscores and symbols (e.g. "PRODUCT CODE" = product_code). */
+const COLS={
+  date:["date","transactiondate","txdate"],
+  code:["productcode","code","itemcode","product","sku"],
+  branch:["branch"],
+  type:["transactiontype","type","txntype"],
+  qty:["qty","quantity"],
+  to:["transferto","to"],
+  doc:["invdrno","invdr","docno","drno","invoiceno","reference"],
+  name:["productname","name","itemname","productdescription","itemdescription","description"],
+  remarks:["remarks","remark","notes"]
+};
+function mapRow(raw){
+  const idx={};for(const k in raw)idx[k.toLowerCase().replace(/[^a-z0-9]/g,"")]=raw[k];
+  const o={row:raw.id!=null?raw.id:"?"};
+  for(const f in COLS){const k=COLS[f].find(c=>c in idx);o[f]=k?idx[k]:""}
+  return o}
+/* ---- Admin login (Supabase Auth, email + password) ---- */
+const AUTH_KEY="iw_admin_session";
+let SESSION=null;
+function saveSession(x){SESSION=x;try{localStorage.setItem(AUTH_KEY,JSON.stringify(x))}catch(_){}}
+function clearSession(){SESSION=null;try{localStorage.removeItem(AUTH_KEY)}catch(_){}}
+function isAdmin(token){try{const b=token.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");const p=JSON.parse(decodeURIComponent(escape(atob(b))));return !!(p.app_metadata&&p.app_metadata.role==="admin")}catch(_){return false}}
+async function authToken(grant,body){
+  const res=await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=${grant}`,{method:"POST",headers:{apikey:SUPABASE_KEY,"Content-Type":"application/json"},body:JSON.stringify(body)});
+  const j=await res.json().catch(()=>({}));
+  if(!res.ok)throw new Error(j.error_description||j.msg||j.message||"Sign in failed");
+  return {access_token:j.access_token,refresh_token:j.refresh_token,expires_at:Math.floor(Date.now()/1000)+(j.expires_in||3600),email:(j.user&&j.user.email)||(SESSION&&SESSION.email)||""}}
+async function getToken(){
+  if(!SESSION)return null;
+  if(SESSION.expires_at-60<Date.now()/1000){try{saveSession(await authToken("refresh_token",{refresh_token:SESSION.refresh_token}))}catch(_){clearSession();return null}}
+  return SESSION.access_token}
+function showLogin(msg){
+  $("login").hidden=false;$("lerr").textContent=msg||"";$("lp").value="";$("loader").hidden=true;
+  setTimeout(()=>($("le").value?$("lp"):$("le")).focus(),0)}
+function hideLogin(){$("login").hidden=true;$("lerr").textContent="";$("who").textContent=SESSION&&SESSION.email?SESSION.email:"Admin"}
+async function signIn(e){
+  e.preventDefault();const btn=$("lgo");btn.disabled=true;btn.textContent="Signing in…";$("lerr").textContent="";
+  try{
+    const x=await authToken("password",{email:$("le").value.trim(),password:$("lp").value});
+    if(!isAdmin(x.access_token))throw new Error("This account does not have admin access.");
+    saveSession(x);hideLogin();loadSheet();
+  }catch(err){$("lerr").textContent=err instanceof TypeError?"Can't reach the server. Check your internet connection.":err.message}
+  btn.disabled=false;btn.textContent="Sign in"}
+async function signOut(){
+  const t=SESSION&&SESSION.access_token;clearSession();
+  if(t)fetch(`${SUPABASE_URL}/auth/v1/logout`,{method:"POST",headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+t}}).catch(()=>{});
+  TX=[];SRC="none";render();if(view==="stock")renderStock();showLogin()}
+async function fetchAll(){
+  const token=await getToken();if(!token||!isAdmin(token))throw {code:"auth"};
+  const page=1000,all=[];
+  for(let from=0;;from+=page){
+    const res=await fetch(`${SUPABASE_URL}/rest/v1/${TABLE}?select=*`,{headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+token,Range:`${from}-${from+page-1}`,"Range-Unit":"items"}});
+    if(res.status===401||res.status===403)throw {code:"auth"};
+    if(!res.ok){let m="";try{m=(await res.json()).message||""}catch(_){}throw {code:"api",message:`${res.status} ${m}`.trim()}}
+    const part=await res.json();all.push(...part);
+    if(part.length<page)break}
+  return all}
+async function loadSheet(){
+  setStatus("loading");
+  try{
+    const data=await fetchAll();
+    const tx=[],bad=[];
+    data.map(mapRow).forEach(r=>{
+      let type=String(r.type||"").trim().toUpperCase();if(type.startsWith("TRANSF"))type="TRANSFER";
+      const date=toISO(r.date),qty=Number(r.qty);
+      if(!date||!(qty>0)||!["IN","OUT","TRANSFER"].includes(type)||!r.code||!r.branch){bad.push(r.row||"?");return}
+      tx.push({date,code:String(r.code).trim(),name:String(r.name||"").trim(),branch:String(r.branch).trim().toUpperCase(),type,qty,to:String(r.to||"").trim().toUpperCase(),doc:String(r.doc||""),remarks:String(r.remarks||"")});
+    });
+    TX=tx;SRC="live";applyData();setStatus("live",{n:tx.length,bad});
+  }catch(e){if(e&&e.code==="auth"){clearSession();setStatus("loading");showLogin("Your session expired. Please sign in again.");return}setStatus("error",e instanceof TypeError?{code:"network"}:e)}
+}
+
+/* Rules: IN adds at BRANCH. OUT subtracts at BRANCH. TRANSFER subtracts at BRANCH and adds at TRANSFER TO (if that is a branch). */
+function build(y,m,br){
+  if(!TX)TX=loadTransactions();
+  const start=`${y}-${pad(m+1)}-01`,end=`${y}-${pad(m+1)}-${pad(new Date(y,m+1,0).getDate())}`;
+  const rows=new Map([...new Set(TX.map(t=>t.code))].sort().map(c=>[c,{code:c,beg:0,days:{}}]));
+  TX.forEach(t=>{
+    if(t.type==="TRANSFER"&&t.to===t.branch)return;
+    let e=null;
+    if(t.branch===br){
+      if(t.type==="IN")e={t:"in",type:"In",party:""};
+      else if(t.type==="OUT")e={t:"out",type:"Out",party:""};
+      else if(t.type==="TRANSFER")e={t:"out",type:"Transfer Out",party:"To "+t.to};
+    }else if(t.type==="TRANSFER"&&t.to===br)e={t:"in",type:"Transfer In",party:"From "+t.branch};
+    const r=e&&rows.get(t.code);if(!r)return;
+    if(t.date<start){r.beg+=e.t==="in"?t.qty:-t.qty;return}
+    if(t.date>end)return;
+    const d=+t.date.slice(8);
+    (r.days[d]=r.days[d]||[]).push({...e,q:t.qty,doc:t.doc,remarks:t.remarks});
+  });
+  return [...rows.values()].map(r=>{let b=r.beg;Object.values(r.days).forEach(a=>a.forEach(e=>b+=e.t==="in"?e.q:-e.q));return{...r,end:b}});
+}
+const sum=(tx,t)=>tx.filter(e=>e.t===t).reduce((a,e)=>a+e.q,0);
+let state=null,dSort={k:null,d:1};
+function render(){
+  const y=+$("yr").value,m=+$("mo").value,br=$("br").value,dim=new Date(y,m+1,0).getDate();
+  const all=build(y,m,br).map((r,i)=>({...r,i}));
+  const q=$("q").value.trim().toLowerCase(),mv=$("mv").checked;
+  const rows=all.filter(r=>(!q||r.code.toLowerCase().includes(q)||(NAMES.get(r.code)||"").toLowerCase().includes(q))&&(!mv||Object.keys(r.days).length));
+  if(dSort.k!==null){
+    const val=r=>dSort.k==="code"?r.code:dSort.k==="beg"?r.beg:dSort.k==="end"?r.end:(r.days[dSort.k]||[]).reduce((a,e)=>a+e.q,0);
+    rows.sort((a,b)=>{const x=dSort.k==="code"?a.code.localeCompare(b.code):val(a)-val(b);return x?x*dSort.d:a.code.localeCompare(b.code)});
+  }
+  const ar=k=>dSort.k===k?(dSort.d>0?" ▲":" ▼"):"";
+  state={y,m,br,all};
+  const we=d=>{const w=new Date(y,m,d).getDay();return w===0||w===6?" we":""};
+  let tO=0,tI=0;all.forEach(r=>Object.values(r.days).forEach(t=>{tO+=sum(t,"out");tI+=sum(t,"in")}));
+  $("stats").innerHTML=`<div class="stat"><small>Items</small><strong>${all.length}</strong></div><div class="stat o"><small>Total out</small><strong>${tO}</strong></div><div class="stat i"><small>Total in</small><strong>${tI}</strong></div><div class="stat"><small>Out of stock</small><strong>${all.filter(r=>r.end===0).length}</strong></div><span class="hint">Tip: use ‹ › to switch months</span>`;
+  let h=`<thead><tr><th class="item" data-k="code" title="Click to sort">Item / Date${ar("code")}</th><th class="pname">Product name</th><th class="beg d" data-k="beg" title="Click to sort" style="width:48px">Beg${ar("beg")}</th>`;
+  for(let d=1;d<=dim;d++)h+=`<th class="d${we(d)}" data-c="${d+1}" data-k="${d}" title="Click to sort by day ${d}">${d}<small>${DOW[new Date(y,m,d).getDay()]}${ar(d)}</small></th>`;
+  h+=`<th class="end" data-k="end" title="Click to sort">End${ar("end")}</th></tr></thead><tbody>`;
+  const colO=Array(dim+1).fill(0),colI=Array(dim+1).fill(0);
+  rows.forEach(r=>{
+    h+=`<tr><td class="item">${r.code}</td><td class="pname" title="${esc(NAMES.get(r.code)||"")}">${esc(NAMES.get(r.code)||"")}</td><td class="beg">${r.beg}</td>`;
+    for(let d=1;d<=dim;d++){
+      const tx=r.days[d];
+      if(!tx){h+=`<td class="c${we(d)}"></td>`;continue}
+      const o=sum(tx,"out"),i=sum(tx,"in");colO[d]+=o;colI[d]+=i;
+      h+=`<td class="c has${we(d)}" data-r="${r.i}" data-d="${d}" tabindex="0" title="Click to view transactions">${o?`<b class="o">(${o})</b>`:""}${i?`<b class="i">+${i}</b>`:""}</td>`;
+    }
+    h+=`<td class="end${r.end===0?" z":r.end<=3?" low":""}">${r.end}</td></tr>`;
+  });
+  if(!rows.length)h+=`<tr><td colspan="${dim+4}" class="empty">${SRC==="live"?"No items match your filters.":"No data. Not connected to the database."}</td></tr>`;
+  h+=`</tbody><tfoot><tr><td class="item">Daily totals</td><td class="pname"></td><td class="beg"></td>`;
+  for(let d=1;d<=dim;d++)h+=`<td class="${we(d).trim()}">${colO[d]?`<span style="color:var(--out)">(${colO[d]})</span>`:""}${colI[d]?`<br><span style="color:var(--in)">+${colI[d]}</span>`:""}</td>`;
+  $("t").innerHTML=h+`<td class="end"></td></tr></tfoot>`;
+}
+function openTx(ri,d){
+  const {y,m,br,all}=state,r=all[ri],tx=r.days[d],o=sum(tx,"out"),i=sum(tx,"in");
+  $("mt").textContent=r.code+(NAMES.get(r.code)?" · "+NAMES.get(r.code):"");
+  $("ms").textContent=`${MONTHS[m]} ${d}, ${y} · ${br}`;
+  $("mb").innerHTML=`<table><thead><tr><th>Type</th><th>Inv./DR. No.</th><th>Transfer</th><th>Remarks</th><th class="n">Qty</th></tr></thead><tbody>`+
+   tx.map(e=>`<tr><td><span class="tag ${e.t==="out"?"o":"i"}">${e.t==="out"?"OUT":"IN"}</span>${e.type}</td><td>${e.doc}</td><td>${e.party||"—"}</td><td>${e.remarks||"—"}</td><td class="n" style="color:var(--${e.t==="out"?"out":"in"})">${e.t==="out"?"("+e.q+")":"+"+e.q}</td></tr>`).join("")+
+   `</tbody></table><div class="mf"><span class="o">Out ${o}</span><span class="i">In ${i}</span><span>Net ${i-o}</span></div>`;
+  $("ov").classList.add("on");$("mx").focus();
+}
+const close=()=>$("ov").classList.remove("on");
+const T=$("t");
+T.addEventListener("click",e=>{
+  const th=e.target.closest("th[data-k]");
+  if(th){const k=th.dataset.k==="code"||th.dataset.k==="beg"||th.dataset.k==="end"?th.dataset.k:+th.dataset.k;
+    dSort=dSort.k===k?{k,d:-dSort.d}:{k,d:k==="code"?1:-1};render();return}
+  const c=e.target.closest("td.has");if(c)openTx(+c.dataset.r,+c.dataset.d)});
+T.addEventListener("keydown",e=>{if(e.key==="Enter"){const c=e.target.closest("td.has");if(c)openTx(+c.dataset.r,+c.dataset.d)}});
+let hc=null;
+T.addEventListener("mouseover",e=>{const c=e.target.closest("td");const idx=c&&!c.classList.contains("item")&&!c.classList.contains("pname")?c.cellIndex:-1;if(idx===hc)return;
+  T.querySelectorAll(".col").forEach(x=>x.classList.remove("col"));hc=idx;
+  if(idx>2&&c.parentNode.parentNode.tagName==="TBODY"){const th=T.tHead.rows[0].cells[idx];th&&th.classList.add("col")}});
+T.addEventListener("mouseleave",()=>{T.querySelectorAll(".col").forEach(x=>x.classList.remove("col"));hc=null});
+$("mx").onclick=close;$("ov").onclick=e=>{if(e.target===$("ov"))close()};
+document.addEventListener("keydown",e=>{if(e.key==="Escape")close()});
+function shift(n){let m=+$("mo").value+n,y=+$("yr").value;if(m<0){m=11;y--}if(m>11){m=0;y++}
+  const yo=$("yr").options;if(y<+yo[0].value||y>+yo[yo.length-1].value)return;$("mo").value=m;$("yr").value=y;render()}
+$("pv").onclick=()=>shift(-1);$("nx").onclick=()=>shift(1);
+$("mo").innerHTML=MONTHS.map((n,i)=>`<option value="${i}">${n}</option>`).join("");
+$("yr").innerHTML=[2024,2025,2026,2027].map(y=>`<option>${y}</option>`).join("");
+$("br").innerHTML=BRANCHES.map(b=>`<option>${b}</option>`).join("");
+$("mo").value=8;$("yr").value=2026;
+["mo","yr","br","mv"].forEach(id=>$(id).onchange=render);$("q").oninput=render;
+$("asof").value=new Date().toISOString().slice(0,10);
+$("tabD").onclick=()=>showView("daily");$("tabS").onclick=()=>showView("stock");
+$("asof").onchange=renderStock;$("hz").onchange=renderStock;$("sq").oninput=renderStock;
+$("s").addEventListener("click",e=>{const th=e.target.closest("th[data-k]");if(!th)return;const k=th.dataset.k;sSort=sSort.k===k?{k,d:-sSort.d}:{k,d:k==="code"?1:-1};renderStock()});
+$("rf").onclick=loadSheet;$("alretry").onclick=loadSheet;
+$("lf").onsubmit=signIn;$("lo").onclick=signOut;
+render();
+try{SESSION=JSON.parse(localStorage.getItem(AUTH_KEY)||"null")}catch(_){SESSION=null}
+if(SESSION&&isAdmin(SESSION.access_token||"")||(SESSION&&SESSION.refresh_token)){hideLogin();loadSheet()}else showLogin();
+</script>
+</body>
+</html>
