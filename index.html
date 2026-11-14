@@ -157,6 +157,9 @@ select option,select optgroup{background:#fff;color:#000}
     <div class="field"><button class="nav" id="pv" aria-label="Previous month">‹</button><select id="mo"></select><i class="sep"></i><select id="yr"></select><button class="nav" id="nx" aria-label="Next month">›</button></div></div>
   <div class="ctl dv"><label for="br">Branch</label><div class="field"><select id="br"></select></div></div>
   <div class="ctl dv"><label for="q">Search item</label><div class="field"><input id="q" type="search" placeholder="e.g. MFLN or 25W"></div></div>
+  <div class="ctl stv" style="display:none"><label for="asof">As of</label><div class="field"><input id="asof" type="date" style="width:150px"></div></div>
+  <div class="ctl stv" style="display:none"><label for="sq">Search item</label><div class="field"><input id="sq" type="search" placeholder="e.g. MFLN or 25W"></div></div>
+  <div class="ctl stv" style="display:none"><label>&nbsp;</label><label class="toggle"><input type="checkbox" id="hz" checked> Hide items with zero stock everywhere</label></div>
   <div class="ctl"><label>Data source</label><div class="field"><span id="st" class="st"></span><i class="sep"></i><button class="nav" id="rf" title="Refresh from API" aria-label="Refresh">↻</button></div></div>
   <div class="ctl dv"><label>&nbsp;</label><label class="toggle"><input type="checkbox" id="mv"> With movement only</label></div>
   <div class="ctl" style="margin-left:auto"><label id="who">Admin</label><button class="btn" id="lo" type="button">Sign out</button></div>
@@ -179,12 +182,7 @@ select option,select optgroup{background:#fff;color:#000}
 <div class="note">Reads live from the wix_product_transaction table (columns: date, product code, branch, transaction type, qty, transfer to, inv./DR. no., remarks). TRANSFER = out at Branch, in at Transfer To. Use ↻ after you add rows. Click a highlighted number for its transactions.</div>
 </main>
 <main id="vStock" class="view" hidden>
-  <div class="bar">
-    <div class="ctl"><label for="asof">As of</label><div class="field"><input id="asof" type="date" style="width:150px"></div></div>
-    <div class="ctl"><label for="sq">Search item</label><div class="field"><input id="sq" type="search" placeholder="e.g. MFLN or 25W"></div></div>
-    <div class="ctl"><label>&nbsp;</label><label class="toggle"><input type="checkbox" id="hz" checked> Hide items with zero stock everywhere</label></div>
-    <div class="ctl selbar" id="selbar" hidden><label>&nbsp;</label><div class="row"><span class="cnt" id="selcount"></span><button class="btn" id="selclr" type="button">Clear</button><button class="btn pri" id="selcsv" type="button">Export CSV</button></div></div>
-  </div>
+  <div class="bar" id="sbar" hidden><div class="ctl selbar"><div class="row"><span class="cnt" id="selcount"></span><button class="btn" id="selclr" type="button">Clear</button><button class="btn pri" id="selcsv" type="button">Export CSV</button></div></div></div>
   <div class="stats" id="sstats"></div>
   <div class="wrap"><table id="s"></table></div>
   <div class="note">Quantity on hand per branch up to the "As of" date: IN adds, OUT subtracts, TRANSFER subtracts at the Branch and adds at Transfer To. <span style="color:var(--out)">Red</span> means the item was logged out before it was logged in.</div>
@@ -268,6 +266,7 @@ function renderStock(){
 function showView(v){
   view=v;$("vDaily").hidden=v!=="daily";$("vStock").hidden=v!=="stock";
   document.querySelectorAll(".dv").forEach(e=>e.style.display=v==="daily"?"":"none");
+  document.querySelectorAll(".stv").forEach(e=>e.style.display=v==="stock"?"":"none");
   $("tabD").classList.toggle("on",v==="daily");$("tabS").classList.toggle("on",v==="stock");
   v==="stock"?renderStock():render()}
 let NAMES=new Map();
@@ -469,7 +468,7 @@ $("s").addEventListener("click",e=>{const th=e.target.closest("th[data-k]");if(!
 /* ---- Row selection + CSV export (Stock by branch) ---- */
 function syncSel(){
   const vis=new Set(lastRows.map(r=>r.code)),n=SEL.size,hid=[...SEL].filter(c=>!vis.has(c)).length;
-  $("selbar").hidden=!n;
+  $("sbar").hidden=!n;
   $("selcount").innerHTML=n+" selected"+(hid?` <small>(${hid} hidden by filters)</small>`:"");
   const a=$("ska");
   if(a){const k=lastRows.filter(r=>SEL.has(r.code)).length;a.checked=!!lastRows.length&&k===lastRows.length;a.indeterminate=k>0&&k<lastRows.length}}
