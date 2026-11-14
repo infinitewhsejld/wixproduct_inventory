@@ -128,6 +128,21 @@ tfoot td.item{z-index:4;font-size:12px;color:var(--mut)}
 .login .err{color:var(--out);font-size:12px;min-height:16px}
 .btn{height:36px;padding:0 14px;border:1px solid var(--line);border-radius:8px;background:var(--card);cursor:pointer}
 .btn:hover{background:var(--beg)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.pri:hover{filter:brightness(.92);background:var(--accent)}
+.ck{position:sticky;left:0;z-index:2;width:40px;min-width:40px;max-width:40px;background:var(--card);border-right:1px solid var(--line2)}
+thead .ck{z-index:4}
+tfoot td.ck{z-index:4}
+.ck input{width:16px;height:16px;margin:0;accent-color:var(--accent);cursor:pointer;vertical-align:middle}
+td.ck{cursor:pointer}
+#s .item,#t .item{left:40px}
+#s .pname,#t .pname{left:230px}
+#s tr.sel td.ck,#s tr.sel td.item,#s tr.sel td.pname,#t tr.sel td.ck,#t tr.sel td.item,#t tr.sel td.pname{background:var(--hov)}
+.bar[hidden]{display:none}
+.selbar[hidden]{display:none}
+.selbar .row{display:flex;align-items:center;gap:8px;height:36px}
+.selbar .cnt{font-weight:600;white-space:nowrap}
+.selbar .cnt small{font-weight:400;color:var(--mut)}
 select option,select optgroup{background:#fff;color:#000}
 </style>
 </head>
@@ -158,6 +173,7 @@ select option,select optgroup{background:#fff;color:#000}
 <div id="loader" class="loader" role="status" aria-live="polite"><svg viewBox="0 0 54 54" fill="none" stroke-width="2" stroke-linecap="round"><circle class="trk" cx="27" cy="27" r="25" pathLength="100"/><circle class="ring" cx="27" cy="27" r="25" pathLength="100"/><path class="trk" pathLength="100" stroke-width="2.6" d="M27 27c-3-6-6.5-8-10-8a8 8 0 000 16c3.5 0 7-2 10-8s6.5-8 10-8a8 8 0 010 16c-3.5 0-7-2-10-8z"/><path class="run" pathLength="100" stroke-width="2.6" d="M27 27c-3-6-6.5-8-10-8a8 8 0 000 16c3.5 0 7-2 10-8s6.5-8 10-8a8 8 0 010 16c-3.5 0-7-2-10-8z"/></svg><p>Loading data…</p></div>
 <div id="alert" class="alert" role="alert" hidden><b>Not connected to the database.</b> <span id="almsg"></span><button id="alretry">Try again</button></div>
 <main id="vDaily" class="view">
+<div class="bar" id="dbar" hidden><div class="ctl selbar"><div class="row"><span class="cnt" id="dselcount"></span><button class="btn" id="dselclr" type="button">Clear</button><button class="btn pri" id="dselcsv" type="button">Export CSV</button></div></div></div>
 <div class="stats" id="stats"></div>
 <div class="wrap" id="wrap"><table id="t"></table></div>
 <div class="note">Reads live from the wix_product_transaction table (columns: date, product code, branch, transaction type, qty, transfer to, inv./DR. no., remarks). TRANSFER = out at Branch, in at Transfer To. Use ↻ after you add rows. Click a highlighted number for its transactions.</div>
@@ -167,6 +183,7 @@ select option,select optgroup{background:#fff;color:#000}
     <div class="ctl"><label for="asof">As of</label><div class="field"><input id="asof" type="date" style="width:150px"></div></div>
     <div class="ctl"><label for="sq">Search item</label><div class="field"><input id="sq" type="search" placeholder="e.g. MFLN or 25W"></div></div>
     <div class="ctl"><label>&nbsp;</label><label class="toggle"><input type="checkbox" id="hz" checked> Hide items with zero stock everywhere</label></div>
+    <div class="ctl selbar" id="selbar" hidden><label>&nbsp;</label><div class="row"><span class="cnt" id="selcount"></span><button class="btn" id="selclr" type="button">Clear</button><button class="btn pri" id="selcsv" type="button">Export CSV</button></div></div>
   </div>
   <div class="stats" id="sstats"></div>
   <div class="wrap"><table id="s"></table></div>
@@ -219,7 +236,7 @@ function rowsToTx(rows){
     tx.push({date,code:g(iC),branch:g(iB).toUpperCase(),type,qty,to:g(iTo).toUpperCase(),doc:g(iDoc),remarks:g(iR)});
   });
   return{tx,bad}}
-let view="daily",sSort={k:"code",d:1};
+let view="daily",sSort={k:"code",d:1},SEL=new Set(),lastRows=[];
 function stockData(asOf){
   const m=new Map(),add=(c,b,q)=>{let r=m.get(c);if(!r){r={};m.set(c,r)}r[b]=(r[b]||0)+q};
   TX.forEach(t=>{
@@ -237,15 +254,17 @@ function renderStock(){
   const units=rows.reduce((a,r)=>a+r.by.reduce((s,x)=>s+(x>0?x:0),0),0);
   rows=rows.filter(r=>(!q||r.code.toLowerCase().includes(q)||(NAMES.get(r.code)||"").toLowerCase().includes(q))&&(!hz||r.by.some(x=>x!==0)));
   rows.sort((a,b)=>{const x=sSort.k==="code"?a.code.localeCompare(b.code):sSort.k==="total"?a.total-b.total:a.by[+sSort.k]-b.by[+sSort.k];return x?x*sSort.d:a.code.localeCompare(b.code)});
+  lastRows=rows;
   $("sstats").innerHTML=`<div class="stat"><small>Items</small><strong>${rows.length}</strong></div><div class="stat i"><small>Items with stock</small><strong>${inStock}</strong></div><div class="stat"><small>Units on hand</small><strong>${units}</strong></div><div class="stat o"><small>Items with negative qty</small><strong>${short}</strong></div><span class="hint">Click a column heading to sort</span>`;
   const ar=k=>sSort.k===String(k)?(sSort.d>0?" ▲":" ▼"):"";
-  let h=`<thead><tr><th class="item" data-k="code">Item${ar("code")}</th><th class="pname">Product name</th>`+BRANCHES.map((b,i)=>`<th class="bh" data-k="${i}">${b}${ar(i)}</th>`).join("")+`<th class="th" data-k="total" style="background:var(--beg)">Total${ar("total")}</th></tr></thead><tbody>`;
+  let h=`<thead><tr><th class="ck"><input type="checkbox" id="ska" aria-label="Select all"></th><th class="item" data-k="code">Item${ar("code")}</th><th class="pname">Product name</th>`+BRANCHES.map((b,i)=>`<th class="bh" data-k="${i}">${b}${ar(i)}</th>`).join("")+`<th class="th" data-k="total" style="background:var(--beg)">Total${ar("total")}</th></tr></thead><tbody>`;
   rows.forEach(r=>{
-    h+=`<tr><td class="item">${r.code}</td><td class="pname" style="${nameFs(NAMES.get(r.code))}" title="${esc(NAMES.get(r.code)||"")}">${esc(NAMES.get(r.code)||"")}</td>`+r.by.map(v=>v>0?`<td class="sv pos">${v}</td>`:v<0?`<td class="sv neg" title="Logged out before the stock was received">${v}</td>`:`<td class="sv z">–</td>`).join("")+`<td class="sv tt">${r.total}</td></tr>`});
-  if(!rows.length)h+=`<tr><td colspan="${BRANCHES.length+3}" class="empty">${SRC==="live"?"No items match your filters.":"No data. Not connected to the database."}</td></tr>`;
+    const on=SEL.has(r.code);
+    h+=`<tr${on?' class="sel"':""}><td class="ck"><input type="checkbox" class="rk" data-c="${esc(r.code)}"${on?" checked":""} aria-label="Select ${esc(r.code)}"></td><td class="item">${r.code}</td><td class="pname" style="${nameFs(NAMES.get(r.code))}" title="${esc(NAMES.get(r.code)||"")}">${esc(NAMES.get(r.code)||"")}</td>`+r.by.map(v=>v>0?`<td class="sv pos">${v}</td>`:v<0?`<td class="sv neg" title="Logged out before the stock was received">${v}</td>`:`<td class="sv z">–</td>`).join("")+`<td class="sv tt">${r.total}</td></tr>`});
+  if(!rows.length)h+=`<tr><td colspan="${BRANCHES.length+4}" class="empty">${SRC==="live"?"No items match your filters.":"No data. Not connected to the database."}</td></tr>`;
   const bt=BRANCHES.map((b,i)=>rows.reduce((a,r)=>a+r.by[i],0));
-  h+=`</tbody><tfoot><tr><td class="item">Total units</td><td class="pname"></td>`+bt.map(v=>`<td class="sv">${v}</td>`).join("")+`<td class="sv tt">${bt.reduce((a,x)=>a+x,0)}</td></tr></tfoot>`;
-  $("s").innerHTML=h}
+  h+=`</tbody><tfoot><tr><td class="ck"></td><td class="item">Total units</td><td class="pname"></td>`+bt.map(v=>`<td class="sv">${v}</td>`).join("")+`<td class="sv tt">${bt.reduce((a,x)=>a+x,0)}</td></tr></tfoot>`;
+  $("s").innerHTML=h;syncSel()}
 function showView(v){
   view=v;$("vDaily").hidden=v!=="daily";$("vStock").hidden=v!=="stock";
   document.querySelectorAll(".dv").forEach(e=>e.style.display=v==="daily"?"":"none");
@@ -326,7 +345,7 @@ async function signIn(e){
 async function signOut(){
   const t=SESSION&&SESSION.access_token;clearSession();
   if(t)fetch(`${SUPABASE_URL}/auth/v1/logout`,{method:"POST",headers:{apikey:SUPABASE_KEY,Authorization:"Bearer "+t}}).catch(()=>{});
-  TX=[];SRC="none";render();if(view==="stock")renderStock();showLogin()}
+  TX=[];SRC="none";SEL.clear();DSEL.clear();render();if(view==="stock")renderStock();showLogin()}
 async function fetchAll(){
   const token=await getToken();if(!token||!isAdmin(token))throw {code:"auth"};
   const page=1000,all=[];
@@ -374,7 +393,7 @@ function build(y,m,br){
   return [...rows.values()].map(r=>{let b=r.beg;Object.values(r.days).forEach(a=>a.forEach(e=>b+=e.t==="in"?e.q:-e.q));return{...r,end:b}});
 }
 const sum=(tx,t)=>tx.filter(e=>e.t===t).reduce((a,e)=>a+e.q,0);
-let state=null,dSort={k:null,d:1};
+let state=null,dSort={k:null,d:1},DSEL=new Set(),lastD=[];
 function render(){
   const y=+$("yr").value,m=+$("mo").value,br=$("br").value,dim=new Date(y,m+1,0).getDate();
   const all=build(y,m,br).map((r,i)=>({...r,i}));
@@ -389,12 +408,14 @@ function render(){
   const we=d=>{const w=new Date(y,m,d).getDay();return w===0||w===6?" we":""};
   let tO=0,tI=0;all.forEach(r=>Object.values(r.days).forEach(t=>{tO+=sum(t,"out");tI+=sum(t,"in")}));
   $("stats").innerHTML=`<div class="stat"><small>Items</small><strong>${all.length}</strong></div><div class="stat o"><small>Total out</small><strong>${tO}</strong></div><div class="stat i"><small>Total in</small><strong>${tI}</strong></div><div class="stat"><small>Out of stock</small><strong>${all.filter(r=>r.end===0).length}</strong></div><span class="hint">Tip: use ‹ › to switch months</span>`;
-  let h=`<thead><tr><th class="item" data-k="code" title="Click to sort">Item / Date${ar("code")}</th><th class="pname">Product name</th><th class="beg d" data-k="beg" title="Click to sort" style="width:48px">Beg${ar("beg")}</th>`;
+  lastD=rows;
+  let h=`<thead><tr><th class="ck"><input type="checkbox" id="dka" aria-label="Select all"></th><th class="item" data-k="code" title="Click to sort">Item / Date${ar("code")}</th><th class="pname">Product name</th><th class="beg d" data-k="beg" title="Click to sort" style="width:48px">Beg${ar("beg")}</th>`;
   for(let d=1;d<=dim;d++)h+=`<th class="d${we(d)}" data-c="${d+1}" data-k="${d}" title="Click to sort by day ${d}">${d}<small>${DOW[new Date(y,m,d).getDay()]}${ar(d)}</small></th>`;
   h+=`<th class="end" data-k="end" title="Click to sort">End${ar("end")}</th></tr></thead><tbody>`;
   const colO=Array(dim+1).fill(0),colI=Array(dim+1).fill(0);
   rows.forEach(r=>{
-    h+=`<tr><td class="item">${r.code}</td><td class="pname" style="${nameFs(NAMES.get(r.code))}" title="${esc(NAMES.get(r.code)||"")}">${esc(NAMES.get(r.code)||"")}</td><td class="beg">${r.beg}</td>`;
+    const on=DSEL.has(r.code);
+    h+=`<tr${on?' class="sel"':""}><td class="ck"><input type="checkbox" class="rk" data-c="${esc(r.code)}"${on?" checked":""} aria-label="Select ${esc(r.code)}"></td><td class="item">${r.code}</td><td class="pname" style="${nameFs(NAMES.get(r.code))}" title="${esc(NAMES.get(r.code)||"")}">${esc(NAMES.get(r.code)||"")}</td><td class="beg">${r.beg}</td>`;
     for(let d=1;d<=dim;d++){
       const tx=r.days[d];
       if(!tx){h+=`<td class="c${we(d)}"></td>`;continue}
@@ -403,10 +424,11 @@ function render(){
     }
     h+=`<td class="end${r.end===0?" z":r.end<=3?" low":""}">${r.end}</td></tr>`;
   });
-  if(!rows.length)h+=`<tr><td colspan="${dim+4}" class="empty">${SRC==="live"?"No items match your filters.":"No data. Not connected to the database."}</td></tr>`;
-  h+=`</tbody><tfoot><tr><td class="item">Daily totals</td><td class="pname"></td><td class="beg"></td>`;
+  if(!rows.length)h+=`<tr><td colspan="${dim+5}" class="empty">${SRC==="live"?"No items match your filters.":"No data. Not connected to the database."}</td></tr>`;
+  h+=`</tbody><tfoot><tr><td class="ck"></td><td class="item">Daily totals</td><td class="pname"></td><td class="beg"></td>`;
   for(let d=1;d<=dim;d++)h+=`<td class="${we(d).trim()}">${colO[d]?`<span style="color:var(--out)">(${colO[d]})</span>`:""}${colI[d]?`<br><span style="color:var(--in)">+${colI[d]}</span>`:""}</td>`;
   $("t").innerHTML=h+`<td class="end"></td></tr></tfoot>`;
+  syncDSel();
 }
 function openTx(ri,d){
   const {y,m,br,all}=state,r=all[ri],tx=r.days[d],o=sum(tx,"out"),i=sum(tx,"in");
@@ -428,7 +450,7 @@ T.addEventListener("keydown",e=>{if(e.key==="Enter"){const c=e.target.closest("t
 let hc=null;
 T.addEventListener("mouseover",e=>{const c=e.target.closest("td");const idx=c&&!c.classList.contains("item")&&!c.classList.contains("pname")?c.cellIndex:-1;if(idx===hc)return;
   T.querySelectorAll(".col").forEach(x=>x.classList.remove("col"));hc=idx;
-  if(idx>2&&c.parentNode.parentNode.tagName==="TBODY"){const th=T.tHead.rows[0].cells[idx];th&&th.classList.add("col")}});
+  if(idx>3&&c.parentNode.parentNode.tagName==="TBODY"){const th=T.tHead.rows[0].cells[idx];th&&th.classList.add("col")}});
 T.addEventListener("mouseleave",()=>{T.querySelectorAll(".col").forEach(x=>x.classList.remove("col"));hc=null});
 $("mx").onclick=close;$("ov").onclick=e=>{if(e.target===$("ov"))close()};
 document.addEventListener("keydown",e=>{if(e.key==="Escape")close()});
@@ -444,6 +466,69 @@ $("asof").value=new Date().toISOString().slice(0,10);
 $("tabD").onclick=()=>showView("daily");$("tabS").onclick=()=>showView("stock");
 $("asof").onchange=renderStock;$("hz").onchange=renderStock;$("sq").oninput=renderStock;
 $("s").addEventListener("click",e=>{const th=e.target.closest("th[data-k]");if(!th)return;const k=th.dataset.k;sSort=sSort.k===k?{k,d:-sSort.d}:{k,d:k==="code"?1:-1};renderStock()});
+/* ---- Row selection + CSV export (Stock by branch) ---- */
+function syncSel(){
+  const vis=new Set(lastRows.map(r=>r.code)),n=SEL.size,hid=[...SEL].filter(c=>!vis.has(c)).length;
+  $("selbar").hidden=!n;
+  $("selcount").innerHTML=n+" selected"+(hid?` <small>(${hid} hidden by filters)</small>`:"");
+  const a=$("ska");
+  if(a){const k=lastRows.filter(r=>SEL.has(r.code)).length;a.checked=!!lastRows.length&&k===lastRows.length;a.indeterminate=k>0&&k<lastRows.length}}
+$("s").addEventListener("change",e=>{
+  const t=e.target;
+  if(t.id==="ska"){
+    lastRows.forEach(r=>t.checked?SEL.add(r.code):SEL.delete(r.code));
+    $("s").querySelectorAll("input.rk").forEach(x=>{x.checked=t.checked;x.closest("tr").classList.toggle("sel",t.checked)});
+    syncSel();return}
+  if(t.classList.contains("rk")){
+    t.checked?SEL.add(t.dataset.c):SEL.delete(t.dataset.c);
+    t.closest("tr").classList.toggle("sel",t.checked);syncSel()}});
+$("s").addEventListener("click",e=>{
+  const c=e.target.closest("td.ck,th.ck");
+  if(c&&e.target.tagName!=="INPUT"){const i=c.querySelector("input");if(i)i.click()}});
+$("selclr").onclick=()=>{SEL.clear();$("s").querySelectorAll("input.rk").forEach(x=>{x.checked=false;x.closest("tr").classList.remove("sel")});syncSel()};
+const csvCell=v=>{let s=v==null?"":String(v);if(typeof v==="string"&&/^[=+\-@\t\r]/.test(s))s="'"+s;return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+function exportSel(){
+  const asOf=$("asof").value||new Date().toISOString().slice(0,10),m=stockData(asOf);
+  const known=new Set(TX.map(t=>t.code)),order=lastRows.map(r=>r.code).filter(c=>SEL.has(c));
+  const rest=[...SEL].filter(c=>known.has(c)&&!order.includes(c)).sort();
+  const rows=[...order,...rest].map(c=>{const r=m.get(c)||{},by=BRANCHES.map(b=>r[b]||0);return [c,NAMES.get(c)||"",...by,by.reduce((a,x)=>a+x,0)]});
+  if(!rows.length)return;
+  dlCSV(`stock-by-branch_${asOf}.csv`,[["Item","Product name",...BRANCHES,"Total"],...rows])}
+function dlCSV(name,table){
+  const blob=new Blob(["﻿"+table.map(r=>r.map(csvCell).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;
+  document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+$("selcsv").onclick=exportSel;
+/* Daily table: same selection + export, for the month and branch currently shown */
+function syncDSel(){
+  const vis=new Set(lastD.map(r=>r.code)),n=DSEL.size,hid=[...DSEL].filter(c=>!vis.has(c)).length;
+  $("dbar").hidden=!n;
+  $("dselcount").innerHTML=n+" selected"+(hid?` <small>(${hid} hidden by filters)</small>`:"");
+  const a=$("dka");
+  if(a){const k=lastD.filter(r=>DSEL.has(r.code)).length;a.checked=!!lastD.length&&k===lastD.length;a.indeterminate=k>0&&k<lastD.length}}
+T.addEventListener("change",e=>{
+  const t=e.target;
+  if(t.id==="dka"){
+    lastD.forEach(r=>t.checked?DSEL.add(r.code):DSEL.delete(r.code));
+    T.querySelectorAll("input.rk").forEach(x=>{x.checked=t.checked;x.closest("tr").classList.toggle("sel",t.checked)});
+    syncDSel();return}
+  if(t.classList.contains("rk")){
+    t.checked?DSEL.add(t.dataset.c):DSEL.delete(t.dataset.c);
+    t.closest("tr").classList.toggle("sel",t.checked);syncDSel()}});
+T.addEventListener("click",e=>{
+  const c=e.target.closest("td.ck,th.ck");
+  if(c&&e.target.tagName!=="INPUT"){const i=c.querySelector("input");if(i)i.click()}});
+$("dselclr").onclick=()=>{DSEL.clear();T.querySelectorAll("input.rk").forEach(x=>{x.checked=false;x.closest("tr").classList.remove("sel")});syncDSel()};
+function exportDaily(){
+  if(!state)return;
+  const {y,m,br,all}=state,dim=new Date(y,m+1,0).getDate(),byCode=new Map(all.map(r=>[r.code,r]));
+  const order=lastD.map(r=>r.code).filter(c=>DSEL.has(c)),rest=[...DSEL].filter(c=>byCode.has(c)&&!order.includes(c)).sort();
+  const rows=[...order,...rest].map(c=>{const r=byCode.get(c);
+    return [c,NAMES.get(c)||"",r.beg,...Array.from({length:dim},(_,i)=>{const t=r.days[i+1];return t?sum(t,"in")-sum(t,"out"):""}),r.end]});
+  if(!rows.length)return;
+  const head=["Item","Product name","Beg",...Array.from({length:dim},(_,i)=>`${y}-${pad(m+1)}-${pad(i+1)}`),"End"];
+  dlCSV(`daily-inventory_${br}_${y}-${pad(m+1)}.csv`,[head,...rows])}
+$("dselcsv").onclick=exportDaily;
 $("rf").onclick=loadSheet;$("alretry").onclick=loadSheet;
 $("lf").onsubmit=signIn;$("lo").onclick=signOut;
 render();
